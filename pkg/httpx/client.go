@@ -224,7 +224,7 @@ func encodeMultipartBody(fd *FormData) (io.Reader, string, error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 	for _, f := range fd.Fields {
-		w.WriteField(f.key, f.value)
+		w.WriteField(f.Key, f.Value)
 	}
 	for _, f := range fd.files {
 		if f.data != nil {

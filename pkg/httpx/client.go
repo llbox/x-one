@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -197,13 +200,59 @@ func encodeBody(body any) (io.Reader, string, error) {
 		return strings.NewReader(v), "text/plain; charset=utf-8", nil
 	case []byte:
 		return bytes.NewReader(v), "application/octet-stream", nil
+	case url.Values:
+		return encodeFormBody(v)
 	case io.Reader:
 		return v, "application/octet-stream", nil
 	default:
+		if fd, ok := body.(*FormData); ok {
+			return encodeMultipartBody(fd)
+		}
 		data, err := json.Marshal(v)
 		if err != nil {
 			return nil, "", err
 		}
 		return bytes.NewReader(data), "application/json; charset=utf-8", nil
 	}
+}
+
+func encodeFormBody(v url.Values) (io.Reader, string, error) {
+	return strings.NewReader(v.Encode()), "application/x-www-form-urlencoded", nil
+}
+
+func encodeMultipartBody(fd *FormData) (io.Reader, string, error) {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	for _, f := range fd.fields {
+		w.WriteField(f.key, f.value)
+	}
+	for _, f := range fd.files {
+		if f.data != nil {
+			part, err := w.CreateFormFile(f.key, f.filename)
+			if err != nil {
+				return nil, "", err
+			}
+			if _, err := io.Copy(part, bytes.NewReader(f.data)); err != nil {
+				return nil, "", err
+			}
+			continue
+		}
+		part, err := w.CreateFormFile(f.key, filepath.Base(f.path))
+		if err != nil {
+			return nil, "", err
+		}
+		file, err := os.Open(f.path)
+		if err != nil {
+			return nil, "", err
+		}
+		if _, err := io.Copy(part, file); err != nil {
+			file.Close()
+			return nil, "", err
+		}
+		file.Close()
+	}
+	if err := w.Close(); err != nil {
+		return nil, "", err
+	}
+	return &buf, w.FormDataContentType(), nil
 }

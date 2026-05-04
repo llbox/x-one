@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 )
 
-type FormData struct {
-	fields []formField
-	files  []formFile
+type FormField struct {
+	Key   string
+	Value string
 }
 
-type formField struct {
-	key   string
-	value string
+type FormData struct {
+	Fields []FormField
+	files  []formFile
 }
 
 type formFile struct {
@@ -27,7 +27,7 @@ func NewFormData() *FormData {
 }
 
 func (fd *FormData) Set(key, value string) *FormData {
-	fd.fields = append(fd.fields, formField{key: key, value: value})
+	fd.Fields = append(fd.Fields, FormField{Key: key, Value: value})
 	return fd
 }
 

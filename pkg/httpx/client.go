@@ -223,7 +223,7 @@ func encodeFormBody(v url.Values) (io.Reader, string, error) {
 func encodeMultipartBody(fd *FormData) (io.Reader, string, error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
-	for _, f := range fd.fields {
+	for _, f := range fd.Fields {
 		w.WriteField(f.key, f.value)
 	}
 	for _, f := range fd.files {
